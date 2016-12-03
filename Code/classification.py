@@ -5,22 +5,29 @@ import numpy as np
 import os
 import feature_extractor
 
-lexical_features = ["lex_char_count", "lex_alpha_distribution",
-                    "lex_upper_case_distribution", "lex_digit_distribution",
-                    "lex_space_distribution", "lex_char_a", "lex_char_b",
-                    "lex_char_c", "lex_char_d", "lex_char_e", "lex_char_f",
-                    "lex_char_g", "lex_char_h", "lex_char_i", "lex_char_j",
-                    "lex_char_k", "lex_char_l", "lex_char_m", "lex_char_n",
-                    "lex_char_o", "lex_char_p", "lex_char_q", "lex_char_r",
-                    "lex_char_s", "lex_char_t", "lex_char_u", "lex_char_v",
-                    "lex_char_w", "lex_char_x", "lex_char_y", "lex_char_z",
-                    "lex_special_~", "lex_special_@", 'lex_special_#',
-                    'lex_special_$', 'lex_special_%', 'lex_special_^',
-                    'lex_special_&', 'lex_special_*', 'lex_special_-',
-                    'lex_special__', 'lex_special_=', 'lex_special_+',
-                    'lex_special_>', 'lex_special_<', 'lex_special_[',
-                    'lex_special_]', 'lex_special_{', 'lex_special_}',
-                    'lex_special_/', 'lex_special_\\', 'lex_special_|']
+lexical_char_features = ["lex_char_count", "lex_alpha_distribution",
+                         "lex_upper_case_distribution", "lex_digit_distribution",
+                         "lex_space_distribution", "lex_char_a", "lex_char_b",
+                         "lex_char_c", "lex_char_d", "lex_char_e", "lex_char_f",
+                         "lex_char_g", "lex_char_h", "lex_char_i", "lex_char_j",
+                         "lex_char_k", "lex_char_l", "lex_char_m", "lex_char_n",
+                         "lex_char_o", "lex_char_p", "lex_char_q", "lex_char_r",
+                         "lex_char_s", "lex_char_t", "lex_char_u", "lex_char_v",
+                         "lex_char_w", "lex_char_x", "lex_char_y", "lex_char_z",
+                         "lex_special_~", "lex_special_@", 'lex_special_#',
+                         'lex_special_$', 'lex_special_%', 'lex_special_^',
+                         'lex_special_&', 'lex_special_*', 'lex_special_-',
+                         'lex_special__', 'lex_special_=', 'lex_special_+',
+                         'lex_special_>', 'lex_special_<', 'lex_special_[',
+                         'lex_special_]', 'lex_special_{', 'lex_special_}',
+                         'lex_special_/', 'lex_special_\\', 'lex_special_|']
+lexical_word_features = ["lex_hapax_legomena", "lex_hapax_dislegomena", "lex_yules_k_measure", "lex_brunets_w_meaure",
+                         "lex_sichels_s_measure", "lex_honores_r_measure", "lex_simpsons_diversity_index",
+                         "lex_no_of_words","lex_no_of_short_words", "lex_no_of_chars_by_C", "lex_average_word_length",
+                         "lex_averag_sentence_length_in_chars", "lex_averag_sentence_length_in_words",
+                         "lex_no_of_unique_words", "lex_1", "lex_2", "lex_3", "lex_4", "lex_5", "lex_6", "lex_7",
+                         "lex_9", "lex_10", "lex_11", "lex_12", "lex_13", "lex_14", "lex_15", "lex_16", "lex_17",
+                         "lex_18", "lex_19", "lex_20"]
 syntactic_features = ["synt_punct_\"", "synt_punct_.", "synt_punct_?",
                       "synt_punct_!", "synt_punct_:", "synt_punct_;",
                       "synt_punct_\'", 'synt_funct_word_a',
@@ -121,6 +128,7 @@ main_path = '/Users/rakshitha/AuthorIdentification/relevant_email_data'
 author_names = ['mann-k', 'kaminski-v']
 training_vectors = []
 class_values = []
+bad_files = 0
 for name in author_names:
     count = 0
     mail_path = main_path + '/' + name
@@ -133,14 +141,23 @@ for name in author_names:
         fp = open(mail_path + '/' + email)
         content = fp.read()
 
-        l_features = feature_extractor.extract_char_lex_feature(
+        l_char_features = feature_extractor.extract_char_lex_feature(
             content)
+        try:
+            l_word_features = feature_extractor.extract_word_lex_features(
+            content)
+        except:
+            # print "Error", email, name
+            bad_files += 1
+            continue
         syn_features = feature_extractor.extract_syntactic_features(
             content)
         struc_features = feature_extractor.extract_structural_features(
             content)
-        for feature in lexical_features:
-            combined_features.append(l_features[feature])
+        for feature in lexical_word_features:
+            combined_features.append(l_word_features[feature])
+        for feature in lexical_char_features:
+            combined_features.append(l_char_features[feature])
         for syn_feature in syntactic_features:
             combined_features.append(syn_features[syn_feature])
         for struct_feature in structural_features:
@@ -148,6 +165,7 @@ for name in author_names:
         training_vectors.append(combined_features)
         class_values.append(name)
         count += 1
+print bad_files
 # Implementing the naive_bayes model here
 X = np.array(training_vectors)
 Y = np.array(class_values)
@@ -195,8 +213,6 @@ predicted = svm_polynomial_kernel_model.predict(X)
 print(metrics.classification_report(expected, predicted))
 print(metrics.confusion_matrix(expected, predicted))
 print "*" * 15
-
-
 
 # implementing linear svms
 linear_svm_linear_kernel_model = svm.LinearSVC()
