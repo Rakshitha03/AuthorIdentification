@@ -44,8 +44,6 @@ def extract_char_lex_feature(text):
     lex_char_features.update(alpha_character_freq)
     return lex_char_features
 
-   
-
 def extract_syntactic_features(text):
     syntactic_features = defaultdict(float)
     #tokenize into words using nltk word_tokenizer
