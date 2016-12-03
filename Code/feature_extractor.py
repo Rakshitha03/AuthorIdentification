@@ -103,9 +103,9 @@ def extract_structural_features(text):
     lowercase_words = [i.lower() for i in text.split()]
     intersection = len(set(greetings) & set(lowercase_words))
     if intersection > 0:
-        has_greeting = True
+        has_greeting = 0
     else:
-        has_greeting = False
+        has_greeting = 1
     structural_features["struct_has_greeting"] = has_greeting
     return structural_features
 
