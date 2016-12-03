@@ -4,7 +4,7 @@ from __future__ import division
 from collections import defaultdict
 import re
 import nltk
-
+import math
 
 
 def extract_char_lex_feature(text):
@@ -108,4 +108,68 @@ def extract_structural_features(text):
         has_greeting = 1
     structural_features["struct_has_greeting"] = has_greeting
     return structural_features
+
+def extract_word_lex_features(text):
+    lex_word_features={}
+    word_count={}
+    word_freq_dist=defaultdict(float)
+    freq_word_count=defaultdict(float)
+    unique_word_set=set()
+    words=nltk.word_tokenize(text)
+    sentences=nltk.sent_tokenize(text)
+    C=len(text)
+    no_of_words=len(words)
+    no_of_sentences=len(sentences)
+    no_of_short_words=0
+    no_of_chars_in_words=0
+    hapax_legomena=0
+    hapax_dislegomena=0
+    simpsons_diversity_index_numerator=0
+    for index in range(len(words)):
+        words[index]=words[index].lower()
+        if not words[index] in word_count:
+            word_count.update({words[index]:1})
+        else:
+            word_count[words[index]]+=1
+        freq_key="%d"%len(words[index])
+        word_freq_dist[freq_key]+=1
+        if len(words[index])<4:
+            no_of_short_words+=1
+        no_of_chars_in_words+=len(words[index])
+        unique_word_set.add(words[index])
+    m1=no_of_words
+    m2=0
+    for word in word_count:
+        freq_word_count[word_count[word]]+=1
+        simpsons_diversity_index_numerator+=word_count[word]*(word_count[word]-1)
+    for freq in freq_word_count:
+        m2+=(freq**2)*freq_word_count[freq]
+    no_of_chars_by_C=no_of_chars_in_words/C
+    average_word_length=no_of_chars_in_words/no_of_words
+    averag_sentence_length_in_words=no_of_words/no_of_sentences
+    averag_sentence_length_in_chars=C/no_of_sentences
+    no_of_unique_words=len(unique_word_set)
+    hapax_legomena=freq_word_count[1]
+    hapax_dislegomena=freq_word_count[2]
+    yules_k_measure=(m1*m2)/(m2-m1)
+    simpsons_diversity_index=1-(simpsons_diversity_index_numerator/(no_of_words*(no_of_words-1)))
+    sichels_s_measure=freq_word_count[2]/no_of_unique_words
+    brunets_w_meaure=no_of_words**(no_of_unique_words-0.17)
+    honores_r_measure=100*math.log(no_of_words)/(1-(freq_word_count[1]/no_of_unique_words))
+    lex_word_features.update({"hapax_legomena":hapax_legomena})
+    lex_word_features.update({"hapax_dislegomena":hapax_dislegomena})
+    lex_word_features.update({"yules_k_measure":yules_k_measure})
+    lex_word_features.update({"brunets_w_meaure":brunets_w_meaure})
+    lex_word_features.update({"sichels_s_measure":sichels_s_measure})
+    lex_word_features.update({"honores_r_measure":honores_r_measure})
+    lex_word_features.update({"simpsons_diversity_index":simpsons_diversity_index})
+    lex_word_features.update({"no_of_words" : no_of_words})
+    lex_word_features.update({"no_of_short_words" : no_of_short_words})
+    lex_word_features.update({"no_of_chars_by_C":no_of_chars_by_C})
+    lex_word_features.update({"average_word_length":average_word_length})
+    lex_word_features.update({"averag_sentence_length_in_chars":averag_sentence_length_in_chars})
+    lex_word_features.update({"averag_sentence_length_in_words":averag_sentence_length_in_words})
+    lex_word_features.update({"no_of_unique_words":no_of_unique_words})
+    lex_word_features.update({"word_freq_dist":word_freq_dist})
+    return lex_word_features
 
