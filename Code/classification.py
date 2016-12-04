@@ -129,36 +129,35 @@ structural_features = ["struct_num_sentences", "struct_num_paragraphs", "struct_
 main_path = '/Users/rakshitha/AuthorIdentification/relevant_email_data'
 author_names = ['mann-k', 'kaminski-v']
 training_vectors = []
-class_values = []
+test_vectors = []
+test_class_values = []
+training_class_values = []
 bad_files = 0
+# Extracting features for training the data
+training_emails = []
 for name in author_names:
     count = 0
     mail_path = main_path + '/' + name
     for email in os.listdir(mail_path):
         if not email.startswith("content"):
             continue
-        if count >= 50:
+        if count >= 150:
             break
         combined_features = []
         fp = open(mail_path + '/' + email)
         content = fp.read()
-
-        l_char_features = feature_extractor.extract_char_lex_feature(
-            content)
         try:
+            l_char_features = feature_extractor.extract_char_lex_feature(
+                content)
             l_word_features = feature_extractor.extract_word_lex_features(
                 content)
+            syn_features = feature_extractor.extract_syntactic_features(
+                content)
+            struc_features = feature_extractor.extract_structural_features(
+                content)
         except:
-            # print "Error", email, name
             bad_files += 1
             continue
-        syn_features = feature_extractor.extract_syntactic_features(
-            content)
-        try:
-            struc_features = feature_extractor.extract_structural_features(
-            content)
-        except:
-            bad_files += 1
         for word_feature in lexical_word_features:
             combined_features.append(l_word_features[word_feature])
         for char_feature in lexical_char_features:
@@ -168,18 +167,59 @@ for name in author_names:
         for struct_feature in structural_features:
             combined_features.append(struc_features[struct_feature])
         training_vectors.append(combined_features)
-        class_values.append(name)
+        training_class_values.append(name)
         count += 1
+        training_emails.append(email)
 print bad_files
+
+#Extracting the features for test_set
+for name in author_names:
+    count = 0
+    mail_path = main_path + '/' + name
+    for email in os.listdir(mail_path):
+        if not email.startswith("content") and email in training_emails:
+            continue
+        if count >= 10:
+            break
+        combined_features = []
+        fp = open(mail_path + '/' + email)
+        content = fp.read()
+        try:
+            l_char_features = feature_extractor.extract_char_lex_feature(
+                content)
+            l_word_features = feature_extractor.extract_word_lex_features(
+                content)
+            syn_features = feature_extractor.extract_syntactic_features(
+                content)
+            struc_features = feature_extractor.extract_structural_features(
+                content)
+        except:
+            bad_files += 1
+            continue
+        for word_feature in lexical_word_features:
+            combined_features.append(l_word_features[word_feature])
+        for char_feature in lexical_char_features:
+            combined_features.append(l_char_features[char_feature])
+        for syn_feature in syntactic_features:
+            combined_features.append(syn_features[syn_feature])
+        for struct_feature in structural_features:
+            combined_features.append(struc_features[struct_feature])
+        test_vectors.append(combined_features)
+        test_class_values.append(name)
+        count += 1
+        training_emails.append(email)
 # Implementing the naive_bayes model here
 X = np.array(training_vectors)
-Y = np.array(class_values)
+Y = np.array(training_class_values)
 naive_bayes_model = MultinomialNB()
 naive_bayes_model.fit(X, Y)
 print "naive bayes", naive_bayes_model
 # testing the accuracy
-expected = Y
-predicted = naive_bayes_model.predict(X)
+test_X = np.array(test_vectors)
+test_Y = np.array(test_class_values)
+
+expected = test_Y
+predicted = naive_bayes_model.predict(test_X)
 # summarize the fit of the model
 print(metrics.classification_report(expected, predicted))
 print(metrics.confusion_matrix(expected, predicted))
@@ -190,8 +230,8 @@ svm_linear_kernel_model = svm.SVC(kernel='linear')
 svm_linear_kernel_model.fit(X, Y)
 print svm_linear_kernel_model
 # testing the accuracy
-expected = Y
-predicted = svm_linear_kernel_model.predict(X)
+expected = test_Y
+predicted = svm_linear_kernel_model.predict(test_X)
 # summarize the fit of the model
 print(metrics.classification_report(expected, predicted))
 print(metrics.confusion_matrix(expected, predicted))
@@ -201,8 +241,8 @@ svm_rbf_kernel_model = svm.SVC(kernel='rbf')
 svm_rbf_kernel_model.fit(X, Y)
 print svm_rbf_kernel_model
 # testing the accuracy
-expected = Y
-predicted = svm_rbf_kernel_model.predict(X)
+expected = test_Y
+predicted = svm_rbf_kernel_model.predict(test_X)
 # summarize the fit of the model
 print(metrics.classification_report(expected, predicted))
 print(metrics.confusion_matrix(expected, predicted))
@@ -212,8 +252,8 @@ svm_polynomial_kernel_model = svm.SVC(kernel='poly')
 svm_polynomial_kernel_model.fit(X, Y)
 print svm_polynomial_kernel_model
 # testing the accuracy
-expected = Y
-predicted = svm_polynomial_kernel_model.predict(X)
+expected = test_Y
+predicted = svm_polynomial_kernel_model.predict(test_X)
 # summarize the fit of the model
 print(metrics.classification_report(expected, predicted))
 print(metrics.confusion_matrix(expected, predicted))
