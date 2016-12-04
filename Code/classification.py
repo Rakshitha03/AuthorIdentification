@@ -23,7 +23,7 @@ lexical_char_features = ["lex_char_count", "lex_alpha_distribution",
                          'lex_special_/', 'lex_special_\\', 'lex_special_|']
 lexical_word_features = ["lex_hapax_legomena", "lex_hapax_dislegomena", "lex_yules_k_measure", "lex_brunets_w_meaure",
                          "lex_sichels_s_measure", "lex_honores_r_measure", "lex_simpsons_diversity_index",
-                         "lex_no_of_words","lex_no_of_short_words", "lex_no_of_chars_by_C", "lex_average_word_length",
+                         "lex_no_of_words", "lex_no_of_short_words", "lex_no_of_chars_by_C", "lex_average_word_length",
                          "lex_averag_sentence_length_in_chars", "lex_averag_sentence_length_in_words",
                          "lex_no_of_unique_words", "lex_1", "lex_2", "lex_3", "lex_4", "lex_5", "lex_6", "lex_7",
                          "lex_9", "lex_10", "lex_11", "lex_12", "lex_13", "lex_14", "lex_15", "lex_16", "lex_17",
@@ -122,8 +122,10 @@ syntactic_features = ["synt_punct_\"", "synt_punct_.", "synt_punct_?",
                       'synt_funct_word_beside', 'synt_funct_word_if',
                       'synt_funct_word_none', 'synt_funct_word_so',
                       'synt_funct_word_up', 'synt_funct_word_your']
-structural_features = ["struct_has_greeting", "struct_paragraph_count",
-                       "struct_sentence_count", "struct_line_count"]
+structural_features = ["struct_num_sentences", "struct_num_paragraphs", "struct_num_sentences_per_paragraph",
+                       "struct_num_chars_per_paragraph", "struct_num_words_per_paragraph", "struct_has_greeting",
+                       "struct_has_quote", "struct_paragraph_has_indentation", "struct_has_url_signature",
+                       "struct_has_email_signature", "struct_has_name_signature"]
 main_path = '/Users/rakshitha/AuthorIdentification/relevant_email_data'
 author_names = ['mann-k', 'kaminski-v']
 training_vectors = []
@@ -145,19 +147,22 @@ for name in author_names:
             content)
         try:
             l_word_features = feature_extractor.extract_word_lex_features(
-            content)
+                content)
         except:
             # print "Error", email, name
             bad_files += 1
             continue
         syn_features = feature_extractor.extract_syntactic_features(
             content)
-        struc_features = feature_extractor.extract_structural_features(
+        try:
+            struc_features = feature_extractor.extract_structural_features(
             content)
-        for feature in lexical_word_features:
-            combined_features.append(l_word_features[feature])
-        for feature in lexical_char_features:
-            combined_features.append(l_char_features[feature])
+        except:
+            bad_files += 1
+        for word_feature in lexical_word_features:
+            combined_features.append(l_word_features[word_feature])
+        for char_feature in lexical_char_features:
+            combined_features.append(l_char_features[char_feature])
         for syn_feature in syntactic_features:
             combined_features.append(syn_features[syn_feature])
         for struct_feature in structural_features:
@@ -214,14 +219,14 @@ print(metrics.classification_report(expected, predicted))
 print(metrics.confusion_matrix(expected, predicted))
 print "*" * 15
 
-# implementing linear svms
-linear_svm_linear_kernel_model = svm.LinearSVC()
-linear_svm_linear_kernel_model.fit(X, Y)
-print linear_svm_linear_kernel_model
-# testing the accuracy
-expected = Y
-predicted = linear_svm_linear_kernel_model.predict(X)
-# summarize the fit of the model
-print(metrics.classification_report(expected, predicted))
-print(metrics.confusion_matrix(expected, predicted))
-print "*" * 15
+# # implementing linear svms
+# linear_svm_linear_kernel_model = svm.LinearSVC()
+# linear_svm_linear_kernel_model.fit(X, Y)
+# print linear_svm_linear_kernel_model
+# # testing the accuracy
+# expected = Y
+# predicted = linear_svm_linear_kernel_model.predict(X)
+# # summarize the fit of the model
+# print(metrics.classification_report(expected, predicted))
+# print(metrics.confusion_matrix(expected, predicted))
+# print "*" * 15
