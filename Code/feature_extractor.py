@@ -87,27 +87,90 @@ def extract_syntactic_features(text):
     syntactic_features.update(func_word_freq)
     return syntactic_features
 
-
 def extract_structural_features(text):
+    paragraph_has_indentation=0
     structural_features = {}
     line_count = len(filter(None, re.split(r'\n', text)))
     structural_features["struct_line_count"] = line_count
-    # A sentence is defined by us as a sequence of words ending with a (.)
-    # or (!) or (?) or (:)
-    sentence_count = len(filter(None, re.split(r'[:.!?]+', text)))
-    structural_features["struct_sentence_count"] = sentence_count
-    # A paragraph is one which is delimited by two \n
-    paragraph_count = len(filter(None, re.split(r'\n\n', text)))
-    structural_features["struct_paragraph_count"] = paragraph_count
-    greetings = ["hi", "hello", "dear", "hey", "respected"]
-    lowercase_words = [i.lower() for i in text.split()]
-    intersection = len(set(greetings) & set(lowercase_words))
-    if intersection > 0:
-        has_greeting = 0
+    text=re.sub(r'\n+',"\n",text)
+    paragraphs = filter(None,re.split(r'\n',text))
+    num_sentences=0
+    num_chars=0
+    num_words=0
+    num_paragraphs=len(paragraphs)
+    for paragraph in paragraphs:
+        if(re.match(r'^(\t| +)',paragraph)):
+            paragraph_has_indentation=1
+        else:
+            paragraph_has_indentation=0
+        sentences=nltk.sent_tokenize(paragraph)
+        words=nltk.word_tokenize(paragraph)
+        num_sentences+=len(sentences)
+        num_chars+=len(paragraph)
+        num_words+=len(words)
+    num_sentences_per_paragraph=num_sentences/num_paragraphs
+    num_chars_per_paragraph=num_chars/num_paragraphs
+    num_words_per_paragraph=num_words/num_paragraphs
+    words=nltk.word_tokenize(paragraphs[0])
+    first_word=words[0]
+    first_word_pos=nltk.pos_tag([first_word])[0][1]
+    if (first_word in ["hi", "hello", "dear", "hey", "respected"])or(first_word_pos=="NNP"):
+        has_greeting=1
     else:
-        has_greeting = 1
+        has_greeting=0
+    if re.search(r'\".*\"',text,re.DOTALL):
+        has_quote=1
+    else:
+        has_quote=0
+    last_index=len(paragraphs)-1
+    if (last_index>=1):
+        lower=last_index-1
+        upper=last_index+1
+    else:
+        lower=1
+        upper=last_index+1
+    for i in range(lower,upper):
+        signature_list=re.split(r': *',paragraphs[i])
+        if len(signature_list)>1:
+            signature_text=signature_list[1]
+        else:
+            signature_text=signature_list[0]
+        if (re.search(r'(([a-z0-9_\.-]+)@([\da-z\.-]+)\.([a-z\.]{2,6})$)',paragraphs[i]) or re.search(r'((https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$)',paragraphs[i]) or re.search(r'[0-9]+',paragraphs[i])):
+            has_signature=1
+        else:
+            has_signature=0
+        if re.search(r'(^([a-z0-9_\.-]+)@([\da-z\.-]+)\.([a-z\.]{2,6})$)',signature_text):
+            email_signature=1
+        else:
+            email_signature=0
+        if re.search(r'(^((https?:\/\/)?([\da-z\.-]+))\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$)',signature_text):
+            url_signature=1
+        else:
+            url_signature=0
+        
+        if re.search(r'[0-9]+',paragraphs[i]):
+            phone_signature=1
+        else:
+            phone_signature=0
+        signature_tokens=nltk.word_tokenize(signature_text)
+        for token in signature_tokens:
+            pos_tag=nltk.pos_tag([token])
+            if pos_tag[0][1]=='NNP':
+                name_signature=1
+            else:
+                name_signature=0
+structural_features["struct_num_sentences"] = num_sentences
+    structural_features["struct_num_paragraphs"] = num_paragraphs
+    structural_features["struct_num_sentences_per_paragraph"] = num_sentences_per_paragraph
+    structural_features["struct_num_chars_per_paragraph"] = num_chars_per_paragraph
+    structural_features["struct_num_words_per_paragraph"] = num_words_per_paragraph
     structural_features["struct_has_greeting"] = has_greeting
-    return structural_features
+    structural_features["struct_has_quote"] = has_quote
+    structural_features["struct_paragraph_has_indentation=1"] = paragraph_has_indentation=1
+    structural_features["struct_has_signature"] = has_signature
+    structural_features["struct_has_url_signature"] = url_signature
+    structural_features["struct_has_email_signature"] = email_signature
+    structural_features["struct_has_phone_signature"] = phone_signature
 
 
 def extract_word_lex_features(text):
