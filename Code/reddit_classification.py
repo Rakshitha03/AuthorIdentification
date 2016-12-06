@@ -5,6 +5,8 @@ from sklearn.cross_validation import cross_val_score
 import numpy as np
 import os
 import feature_extractor
+import json
+from pprint import pprint
 
 lexical_char_features = ["lex_char_count", "lex_alpha_distribution",
                          "lex_upper_case_distribution", "lex_digit_distribution",
@@ -127,8 +129,11 @@ structural_features = ["struct_num_sentences", "struct_num_paragraphs", "struct_
                        "struct_num_chars_per_paragraph", "struct_num_words_per_paragraph", "struct_has_greeting",
                        "struct_has_quote", "struct_paragraph_has_indentation", "struct_has_url_signature",
                        "struct_has_email_signature", "struct_has_name_signature"]
-main_path = '/Users/rakshitha/AuthorIdentification/relevant_email_data'
-author_names = ['mann-k', 'kaminski-v']#, 'symes-k','germany-c', 'bass-e', 'scott-s','rogers-b','beck-s','arnold-j','rodrique-r']
+main_path = '/Users/rakshitha/AuthorIdentification/reddit_Data.json'
+author_names = ['nittanylionstorm07', 'HardKnockRiffe', 'OnthefarWind','AJinxyCat','740Buckeye','GoldandBlue','Mufro']#, 'symes-k','germany-c', 'bass-e', 'scott-s','rogers-b','beck-s','arnold-j','rodrique-r']
+with open(main_path) as data_file:
+    data = json.load(data_file)
+# pprint(data)
 training_vectors = []
 test_vectors = []
 test_class_values = []
@@ -136,115 +141,121 @@ training_class_values = []
 bad_files = 0
 # Extracting features for training the data
 training_emails = []
-for name in author_names:
-    print name
-    count = 0
-    mail_path = main_path + '/' + name
-    for email in os.listdir(mail_path):
-        if not email.startswith("content"):
-            continue
-        if count >= 75:
-            break
-        combined_features = []
-        fp = open(mail_path + '/' + email)
-        content = fp.read()
-        try:
-            l_char_features = feature_extractor.extract_char_lex_feature(
-                content)
-            l_word_features = feature_extractor.extract_word_lex_features(
-                content)
-            syn_features = feature_extractor.extract_syntactic_features(
-                content)
-            struc_features = feature_extractor.extract_structural_features(
-                content)
-        except:
-            bad_files += 1
-            continue
-        if l_word_features["lex_no_of_words"] not in range(50, 100):
-            continue
-        # print "word count", l_word_features["lex_no_of_words"]
-        # print email
-        for char_feature in lexical_char_features:
-            combined_features.append(l_char_features[char_feature])
-        for word_feature in lexical_word_features:
-            combined_features.append(l_word_features[word_feature])
-        # for syn_feature in syntactic_features:
-        #     combined_features.append(syn_features[syn_feature])
-        # for struct_feature in structural_features:
-        #     combined_features.append(struc_features[struct_feature])
-        training_vectors.append(combined_features)
-        training_class_values.append(name)
-        count += 1
-        # training_emails.append(email)
+counts = [25,50,75,100]
+for c_max in counts:
+    for name in author_names:
+        print name
+        count = 0
+    #     mail_path = main_path + '/' + name
+        for comment in data[name]["comments"]:
+            # print comment
+            content = comment["body"]
+    #         if not email.startswith("content"):
+    #             continue
+            if count >= c_max:
+                break
+            combined_features = []
+    #         fp = open(mail_path + '/' + email)
+    #         content = fp.read()
+            try:
+                l_char_features = feature_extractor.extract_char_lex_feature(
+                    content)
+                l_word_features = feature_extractor.extract_word_lex_features(
+                    content)
+                syn_features = feature_extractor.extract_syntactic_features(
+                    content)
+                struc_features = feature_extractor.extract_structural_features(
+                    content)
+            except:
+                bad_files += 1
+                continue
+            # if l_word_features["lex_no_of_words"] not in range(50, 100):
+            #     continue
+    #         # print "word count", l_word_features["lex_no_of_words"]
+    #         # print email
+            for char_feature in lexical_char_features:
+                combined_features.append(l_char_features[char_feature])
+            for word_feature in lexical_word_features:
+                combined_features.append(l_word_features[word_feature])
+            for syn_feature in syntactic_features:
+                combined_features.append(syn_features[syn_feature])
+            for struct_feature in structural_features:
+                combined_features.append(struc_features[struct_feature])
+            training_vectors.append(combined_features)
+            training_class_values.append(name)
+            count += 1
+#         # training_emails.append(email)
 print bad_files
-
-# Extracting the features for test_set
-# for name in author_names:
-#     count = 0
-#     mail_path = main_path + '/' + name
-#     emails =  os.listdir(mail_path)
-#     random.shuffle(emails)
-#     for email in emails:
-#         if not email.startswith("content"):# and email in training_emails:
-#             continue
-#         if count >= 10:
-#             break
-#         combined_features = []
-#         fp = open(mail_path + '/' + email)
-#         content = fp.read()
-#         try:
-#             l_char_features = feature_extractor.extract_char_lex_feature(
-#                 content)
-#             l_word_features = feature_extractor.extract_word_lex_features(
-#                 content)
-#             # syn_features = feature_extractor.extract_syntactic_features(
-#             #     content)
-#             struc_features = feature_extractor.extract_structural_features(
-#                 content)
-#         except:
-#             bad_files += 1
-#             continue
-#         for word_feature in lexical_word_features:
-#             combined_features.append(l_word_features[word_feature])
-#         for char_feature in lexical_char_features:
-#             combined_features.append(l_char_features[char_feature])
-#         # for syn_feature in syntactic_features:
-#         #     combined_features.append(syn_features[syn_feature])
-#         for struct_feature in structural_features:
-#             combined_features.append(struc_features[struct_feature])
-#         test_vectors.append(combined_features)
-#         test_class_values.append(name)
-#         count += 1
-#         training_emails.append(email)
+#
+# # Extracting the features for test_set
+# # for name in author_names:
+# #     count = 0
+# #     mail_path = main_path + '/' + name
+# #     emails =  os.listdir(mail_path)
+# #     random.shuffle(emails)
+# #     for email in emails:
+# #         if not email.startswith("content"):# and email in training_emails:
+# #             continue
+# #         if count >= 10:
+# #             break
+# #         combined_features = []
+# #         fp = open(mail_path + '/' + email)
+# #         content = fp.read()
+# #         try:
+# #             l_char_features = feature_extractor.extract_char_lex_feature(
+# #                 content)
+# #             l_word_features = feature_extractor.extract_word_lex_features(
+# #                 content)
+# #             # syn_features = feature_extractor.extract_syntactic_features(
+# #             #     content)
+# #             struc_features = feature_extractor.extract_structural_features(
+# #                 content)
+# #         except:
+# #             bad_files += 1
+# #             continue
+# #         for word_feature in lexical_word_features:
+# #             combined_features.append(l_word_features[word_feature])
+# #         for char_feature in lexical_char_features:
+# #             combined_features.append(l_char_features[char_feature])
+# #         # for syn_feature in syntactic_features:
+# #         #     combined_features.append(syn_features[syn_feature])
+# #         for struct_feature in structural_features:
+# #             combined_features.append(struc_features[struct_feature])
+# #         test_vectors.append(combined_features)
+# #         test_class_values.append(name)
+# #         count += 1
+# #         training_emails.append(email)
 # Implementing the naive_bayes model here
+# print training_vectors, training_class_values
 X = np.array(training_vectors)
 Y = np.array(training_class_values)
 naive_bayes_model = MultinomialNB()
 # naive_bayes_model.fit(X, Y)
 print "naive bayes", naive_bayes_model
+# print X,Y
 # testing the accuracy
 # test_X = np.array(test_vectors)
 # test_Y = np.array(test_class_values)
 scores = cross_val_score(naive_bayes_model, X, Y, cv=10, scoring="accuracy")
 print scores
 print scores.mean()
-# expected = test_Y
-# expected = Y
-# # predicted = naive_bayes_model.predict(test_X)
-# predicted = naive_bayes_model.predict(X)
-# # summarize the fit of the model
-# print(metrics.classification_report(expected, predicted))
-# print(metrics.confusion_matrix(expected, predicted))
-# print "*" * 15
-# implementing SVC here
-# X_train, X_test, y_train, y_test = train_test_split(X,Y, test_size = 0.2, random_state =0)
+# # expected = test_Y
+# # expected = Y
+# # # predicted = naive_bayes_model.predict(test_X)
+# # predicted = naive_bayes_model.predict(X)
+# # # summarize the fit of the model
+# # print(metrics.classification_report(expected, predicted))
+# # print(metrics.confusion_matrix(expected, predicted))
+# # print "*" * 15
+# # implementing SVC here
+# # X_train, X_test, y_train, y_test = train_test_split(X,Y, test_size = 0.2, random_state =0)
 svm_linear_kernel_model = svm.SVC(kernel='linear')
-svm_rbf_kernel_model = svm.SVC(kernel='rbf')
-svm_polynomial_kernel_model = svm.SVC(kernel='poly')
-# cv = ShuffleSplit(X_train.shape[0], n_iter=10, test_size=0.2, random_state=0)
-# gammas = np.logspace(-6, -1, 10)
-# classifier = GridSearchCV(estimator=svm_linear_kernel_model, cv=cv, param_grid=dict(gamma=gammas))
-# classifier.fit(X_train, y_train)
+# svm_rbf_kernel_model = svm.SVC(kernel='rbf')
+# svm_polynomial_kernel_model = svm.SVC(kernel='poly')
+# # cv = ShuffleSplit(X_train.shape[0], n_iter=10, test_size=0.2, random_state=0)
+# # gammas = np.logspace(-6, -1, 10)
+# # classifier = GridSearchCV(estimator=svm_linear_kernel_model, cv=cv, param_grid=dict(gamma=gammas))
+# # classifier.fit(X_train, y_train)
 scores = cross_val_score(svm_linear_kernel_model, X, Y, cv=10, scoring="accuracy")
 print scores
 print scores.mean()
