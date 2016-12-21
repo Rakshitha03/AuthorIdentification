@@ -7,6 +7,7 @@ import nltk
 import math
 
 
+# method to extract character based lexical features
 def extract_char_lex_feature(text):
     lex_char_features = defaultdict(float)
     no_of_chars = len(text)
@@ -45,119 +46,7 @@ def extract_char_lex_feature(text):
     return lex_char_features
 
 
-def extract_syntactic_features(text):
-    syntactic_features = defaultdict(float)
-    # tokenize into words using nltk word_tokenizer
-    tokens = nltk.word_tokenize(text)
-    punctuation_list = ["\"", ".", "?", "!", ":", ";", "\'"]
-    punctuation_freq = defaultdict(int)
-    functional_word_list = ['a', 'between', 'in', 'nor', 'some', 'upon',
-                            'about', 'both', 'including', 'nothing', 'somebody',
-                            'us', 'above', 'but', 'inside', 'of', 'someone',
-                            'used', 'after', 'by', 'into', 'off', 'something',
-                            'via', 'all', 'can', 'is', 'on', 'such', 'we',
-                            'although', 'cos', 'it', 'once', 'than', 'what',
-                            'am', 'do', 'its', 'one', 'that', 'whatever',
-                            'among', 'down', 'latter', 'onto', 'the', 'when',
-                            'an', 'each', 'less', 'opposite', 'their', 'where',
-                            'and', 'either', 'like', 'or', 'them', 'whether',
-                            'another', 'enough', 'little', 'our', 'these',
-                            'which', 'any', 'every', 'lots', 'outside', 'they',
-                            'while', 'anybody', 'everybody', 'many', 'over',
-                            'this', 'who', 'anyone', 'everyone', 'me', 'own',
-                            'those', 'whoever', 'anything', 'everything',
-                            'more', 'past', 'though', 'whom', 'are', 'few',
-                            'most', 'per', 'through', 'whose', 'around',
-                            'following', 'much', 'plenty', 'till', 'will', 'as',
-                            'for', 'must', 'plus', 'to', 'with', 'at', 'from',
-                            'my', 'regarding', 'toward', 'within', 'be', 'have',
-                            'near', 'same', 'towards', 'without', 'because',
-                            'he', 'need', 'several', 'under', 'worth', 'before',
-                            'her', 'neither', 'she', 'unless', 'would',
-                            'behind', 'him', 'no', 'should', 'unlike', 'yes',
-                            'below', 'i', 'nobody', 'since', 'until', 'you',
-                            'beside', 'if', 'none', 'so', 'up', 'your']
-    func_word_freq = defaultdict(int)
-    for word in tokens:
-        if word in punctuation_list:
-            punctuation_freq["synt_punct_" + word] += 1
-        elif word in functional_word_list:
-            func_word_freq["synt_funct_word_" + word] += 1
-    syntactic_features.update(punctuation_freq)
-    syntactic_features.update(func_word_freq)
-    return syntactic_features
-
-
-def extract_structural_features(text):
-    paragraph_has_indentation = 0
-    structural_features = {}
-    line_count = len(filter(None, re.split(r'\n', text)))
-    structural_features["struct_line_count"] = line_count
-    text = re.sub(r'\n+', "\n", text)
-    paragraphs = filter(None, re.split(r'\n', text))
-    num_sentences = 0
-    num_chars = 0
-    num_words = 0
-    num_paragraphs = len(paragraphs)
-    for paragraph in paragraphs:
-        if (re.match(r'^(\t| +)', paragraph)):
-            paragraph_has_indentation = 1
-        else:
-            paragraph_has_indentation = 0
-        sentences = nltk.sent_tokenize(paragraph)
-        words = nltk.word_tokenize(paragraph)
-        num_sentences += len(sentences)
-        num_chars += len(paragraph)
-        num_words += len(words)
-    num_sentences_per_paragraph = num_sentences / num_paragraphs
-    num_chars_per_paragraph = num_chars / num_paragraphs
-    num_words_per_paragraph = num_words / num_paragraphs
-    words = nltk.word_tokenize(paragraphs[0])
-    first_word = words[0]
-    first_word_pos = nltk.pos_tag([first_word])[0][1]
-    if (first_word in ["hi", "hello", "dear", "hey", "respected"]) or (first_word_pos == "NNP"):
-        has_greeting = 1
-    else:
-        has_greeting = 0
-    if re.search(r'\".*\"', text, re.DOTALL):
-        has_quote = 1
-    else:
-        has_quote = 0
-    url_signature = 0
-    name_signature = 0
-    email_signature = 0
-    last_index = len(paragraphs)
-    if last_index >= 2:
-        for paragraph in paragraphs[-2]:
-            signature_list = re.split(r': *', paragraph)
-            if len(signature_list) > 1:
-                signature_text = signature_list[1]
-            else:
-                signature_text = signature_list[0]
-            if re.search(r'(^([a-z0-9_\.-]+)@([\da-z\.-]+)\.([a-z\.]{2,6})$)', signature_text):
-                email_signature = 1
-            if re.search(r'(^((https?:\/\/)?([\da-z\.-]+))\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$)', signature_text):
-                url_signature = 1
-            signature_tokens = nltk.word_tokenize(signature_text)
-            for token in signature_tokens:
-                pos_tag = nltk.pos_tag([token])
-                if pos_tag[0][1] == 'NNP':
-                    name_signature = 1
-
-    structural_features["struct_num_sentences"] = num_sentences
-    structural_features["struct_num_paragraphs"] = num_paragraphs
-    structural_features["struct_num_sentences_per_paragraph"] = num_sentences_per_paragraph
-    structural_features["struct_num_chars_per_paragraph"] = num_chars_per_paragraph
-    structural_features["struct_num_words_per_paragraph"] = num_words_per_paragraph
-    structural_features["struct_has_greeting"] = has_greeting
-    structural_features["struct_has_quote"] = has_quote
-    structural_features["struct_paragraph_has_indentation"] = paragraph_has_indentation
-    structural_features["struct_has_url_signature"] = url_signature
-    structural_features["struct_has_email_signature"] = email_signature
-    structural_features["struct_has_name_signature"] = name_signature
-    return structural_features
-
-
+# method to extract word based lexical features
 def extract_word_lex_features(text):
     lex_word_features = defaultdict(float)
     word_count = defaultdict(float)
@@ -229,3 +118,118 @@ def extract_word_lex_features(text):
     lex_word_features["lex_no_of_unique_words"] = no_of_unique_words
     lex_word_features.update(word_freq_dist)
     return lex_word_features
+
+
+# method to extract syntactic features
+def extract_syntactic_features(text):
+    syntactic_features = defaultdict(float)
+    # tokenize into words using nltk word_tokenizer
+    tokens = nltk.word_tokenize(text)
+    punctuation_list = ["\"", ".", "?", "!", ":", ";", "\'"]
+    punctuation_freq = defaultdict(int)
+    functional_word_list = ['a', 'between', 'in', 'nor', 'some', 'upon',
+                            'about', 'both', 'including', 'nothing', 'somebody',
+                            'us', 'above', 'but', 'inside', 'of', 'someone',
+                            'used', 'after', 'by', 'into', 'off', 'something',
+                            'via', 'all', 'can', 'is', 'on', 'such', 'we',
+                            'although', 'cos', 'it', 'once', 'than', 'what',
+                            'am', 'do', 'its', 'one', 'that', 'whatever',
+                            'among', 'down', 'latter', 'onto', 'the', 'when',
+                            'an', 'each', 'less', 'opposite', 'their', 'where',
+                            'and', 'either', 'like', 'or', 'them', 'whether',
+                            'another', 'enough', 'little', 'our', 'these',
+                            'which', 'any', 'every', 'lots', 'outside', 'they',
+                            'while', 'anybody', 'everybody', 'many', 'over',
+                            'this', 'who', 'anyone', 'everyone', 'me', 'own',
+                            'those', 'whoever', 'anything', 'everything',
+                            'more', 'past', 'though', 'whom', 'are', 'few',
+                            'most', 'per', 'through', 'whose', 'around',
+                            'following', 'much', 'plenty', 'till', 'will', 'as',
+                            'for', 'must', 'plus', 'to', 'with', 'at', 'from',
+                            'my', 'regarding', 'toward', 'within', 'be', 'have',
+                            'near', 'same', 'towards', 'without', 'because',
+                            'he', 'need', 'several', 'under', 'worth', 'before',
+                            'her', 'neither', 'she', 'unless', 'would',
+                            'behind', 'him', 'no', 'should', 'unlike', 'yes',
+                            'below', 'i', 'nobody', 'since', 'until', 'you',
+                            'beside', 'if', 'none', 'so', 'up', 'your']
+    func_word_freq = defaultdict(int)
+    for word in tokens:
+        if word in punctuation_list:
+            punctuation_freq["synt_punct_" + word] += 1
+        elif word in functional_word_list:
+            func_word_freq["synt_funct_word_" + word] += 1
+    syntactic_features.update(punctuation_freq)
+    syntactic_features.update(func_word_freq)
+    return syntactic_features
+
+
+# method to extract structural features
+def extract_structural_features(text):
+    paragraph_has_indentation = 0
+    structural_features = {}
+    line_count = len(filter(None, re.split(r'\n', text)))
+    structural_features["struct_line_count"] = line_count
+    text = re.sub(r'\n+', "\n", text)
+    paragraphs = filter(None, re.split(r'\n', text))
+    num_sentences = 0
+    num_chars = 0
+    num_words = 0
+    num_paragraphs = len(paragraphs)
+    for paragraph in paragraphs:
+        if re.match(r'^(\t| +)', paragraph):
+            paragraph_has_indentation = 1
+        else:
+            paragraph_has_indentation = 0
+        sentences = nltk.sent_tokenize(paragraph)
+        words = nltk.word_tokenize(paragraph)
+        num_sentences += len(sentences)
+        num_chars += len(paragraph)
+        num_words += len(words)
+    num_sentences_per_paragraph = num_sentences / num_paragraphs
+    num_chars_per_paragraph = num_chars / num_paragraphs
+    num_words_per_paragraph = num_words / num_paragraphs
+    words = nltk.word_tokenize(paragraphs[0])
+    first_word = words[0]
+    first_word_pos = nltk.pos_tag([first_word])[0][1]
+    if (first_word in ["hi", "hello", "dear", "hey", "respected"]) or (first_word_pos == "NNP"):
+        has_greeting = 1
+    else:
+        has_greeting = 0
+    if re.search(r'\".*\"', text, re.DOTALL):
+        has_quote = 1
+    else:
+        has_quote = 0
+    url_signature = 0
+    name_signature = 0
+    email_signature = 0
+    last_index = len(paragraphs)
+    if last_index >= 2:
+        for paragraph in paragraphs[-2]:
+            signature_list = re.split(r': *', paragraph)
+            if len(signature_list) > 1:
+                signature_text = signature_list[1]
+            else:
+                signature_text = signature_list[0]
+            if re.search(r'(^([a-z0-9_\.-]+)@([\da-z\.-]+)\.([a-z\.]{2,6})$)', signature_text):
+                email_signature = 1
+            if re.search(r'(^((https?:\/\/)?([\da-z\.-]+))\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$)', signature_text):
+                url_signature = 1
+            signature_tokens = nltk.word_tokenize(signature_text)
+            for token in signature_tokens:
+                pos_tag = nltk.pos_tag([token])
+                if pos_tag[0][1] == 'NNP':
+                    name_signature = 1
+
+    structural_features["struct_num_sentences"] = num_sentences
+    structural_features["struct_num_paragraphs"] = num_paragraphs
+    structural_features["struct_num_sentences_per_paragraph"] = num_sentences_per_paragraph
+    structural_features["struct_num_chars_per_paragraph"] = num_chars_per_paragraph
+    structural_features["struct_num_words_per_paragraph"] = num_words_per_paragraph
+    structural_features["struct_has_greeting"] = has_greeting
+    structural_features["struct_has_quote"] = has_quote
+    structural_features["struct_paragraph_has_indentation"] = paragraph_has_indentation
+    structural_features["struct_has_url_signature"] = url_signature
+    structural_features["struct_has_email_signature"] = email_signature
+    structural_features["struct_has_name_signature"] = name_signature
+    return structural_features
