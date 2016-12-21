@@ -53,9 +53,9 @@ for i in range(10):
     sentence_count_list.append(
         author_content_info[author_name]["total_sentence_count"])
     x.append(i + 1)
-    # print "Total num of words\t Total num of sentences"
-    # print author_content_info[top_senders[i]]["total_word_count"], author_content_info[top_senders[i]][
-    #     "total_sentence_count"]
+    print "Total num of words\t Total num of sentences"
+    print author_content_info[top_senders[i]]["total_word_count"], author_content_info[top_senders[i]][
+        "total_sentence_count"]
     print
     print
 print "Author \t Avg word len \t Avg sent len"
