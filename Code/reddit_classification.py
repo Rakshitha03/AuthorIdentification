@@ -7,6 +7,7 @@ import os
 import feature_extractor
 import json
 from pprint import pprint
+from matplotlib import pyplot as plt
 
 lexical_char_features = ["lex_char_count", "lex_alpha_distribution",
                          "lex_upper_case_distribution", "lex_digit_distribution",
@@ -130,33 +131,103 @@ structural_features = ["struct_num_sentences", "struct_num_paragraphs", "struct_
                        "struct_has_quote", "struct_paragraph_has_indentation", "struct_has_url_signature",
                        "struct_has_email_signature", "struct_has_name_signature"]
 main_path = '/Users/rakshitha/AuthorIdentification/reddit_Data.json'
-author_names = ['nittanylionstorm07', 'HardKnockRiffe', 'OnthefarWind','AJinxyCat','740Buckeye','GoldandBlue','Mufro']#, 'symes-k','germany-c', 'bass-e', 'scott-s','rogers-b','beck-s','arnold-j','rodrique-r']
+author_names = ['nittanylionstorm07',
+                'HardKnockRiffe']  # , 'OnthefarWind','AJinxyCat','740Buckeye','GoldandBlue','Mufro']#, 'symes-k','germany-c', 'bass-e', 'scott-s','rogers-b','beck-s','arnold-j','rodrique-r']
 with open(main_path) as data_file:
     data = json.load(data_file)
-# pprint(data)
-training_vectors = []
-test_vectors = []
-test_class_values = []
-training_class_values = []
-bad_files = 0
+
+
+''' i) We first perform a binary classification by taking the top 2 commentors who have commented maximum number of times.
+    We compare the classification accuracy obtained by Naive Bayes and SVM classifiers. The size of the training data is
+    set to 50 comments and lexical features are used for classification.
+    ii) We next vary the feature parameter i.e compare the accuracies obtained by just using lexical features,
+    lexical + syntactic features, lexical + syntactic + structural features. All the other parameters remain the
+    same as mentioned above.
+    iii) Next we change the size of the training set i.e increase the size from 20 comments, 30 comments, 40 comments to
+    50 comments and compare the accuracies obtained. Other parameters remain the same as mentioned in (i)
+    iv) Lastly to compare the effect on accuracies on increase in the number of authors, we increase the size of
+    authors from 2 commentors, 4 commentors, 6 commentors thereby performing a 2-way, 4-way, and 6-way
+    classification respectively. The top n( where n being 2,4,6) who commented the most are taken into
+    consideration.
+    '''
+
+authorsList = [['nittanylionstorm07', 'HardKnockRiffe'],
+           ['nittanylionstorm07', 'HardKnockRiffe', 'OnthefarWind', 'AJinxyCat'],
+           ['nittanylionstorm07', 'HardKnockRiffe', 'OnthefarWind', 'AJinxyCat', '740Buckeye', 'GoldandBlue']]
+feature_selection = [['char', 'word'], ['char', 'word', 'syntactic'], ['char', 'word', 'structural', 'syntactic']]
+features = ['F1', 'F1+F2', 'F1+F2+F3']
+training_sizes = [20, 30, 40, 50]
+
 # Extracting features for training the data
 training_emails = []
-counts = [25,50,75,100]
-for c_max in counts:
+naive_bayes_mean = []
+svm_mean = []
+
+''' Execution of the (i)'''
+print "Accuracy comparison of models"
+author_names = authorsList[0]
+count = 0
+training_vectors = []
+training_class_values = []
+# Keeps a count of the files with no content or the mails which throw an exception.
+bad_files = 0
+feature_names = []
+for name in author_names:
+    count = 0
+    for comment in data[name]["comments"]:
+        content = comment["body"]
+        if count >= training_sizes[-1]:
+            break
+        combined_features = []
+        try:
+            l_char_features = feature_extractor.extract_char_lex_feature(
+                content)
+            l_word_features = feature_extractor.extract_word_lex_features(
+                content)
+        except:
+            bad_files += 1
+            continue
+        # We consider emails which have at least 50 to 100 words in them
+        for char_feature in lexical_char_features:
+            combined_features.append(l_char_features[char_feature])
+            feature_names.append(char_feature)
+        for word_feature in lexical_word_features:
+            combined_features.append(l_word_features[word_feature])
+            feature_names.append(word_feature)
+        training_vectors.append(combined_features)
+        training_class_values.append(name)
+        count += 1
+        # training_emails.append(email)
+# Classification using sci-kit. 10-fold cross validation
+X = np.array(training_vectors)
+Y = np.array(training_class_values)
+naive_bayes_model = MultinomialNB()
+print "Naive bayes accuracy:"
+score_1 = cross_val_score(naive_bayes_model, X, Y, cv=10, scoring="accuracy")
+print score_1.mean()
+svm_linear_kernel_model = svm.SVC(kernel='linear')
+print "SVM accuracy: "
+score_2 = cross_val_score(svm_linear_kernel_model, X, Y, cv=10, scoring="accuracy")
+print score_2.mean()
+
+
+'''Execution of part (ii)'''
+print
+print "*"*20
+print "Accuracy comparison across features"
+for feat in feature_selection:
+    author_names = authorsList[0]
+    training_vectors = []
+    training_class_values = []
+    bad_files = 0
+    feature_names = []
     for name in author_names:
-        print name
         count = 0
-    #     mail_path = main_path + '/' + name
         for comment in data[name]["comments"]:
-            # print comment
             content = comment["body"]
-    #         if not email.startswith("content"):
-    #             continue
-            if count >= c_max:
+            if count >= training_sizes[-1]:
                 break
             combined_features = []
-    #         fp = open(mail_path + '/' + email)
-    #         content = fp.read()
             try:
                 l_char_features = feature_extractor.extract_char_lex_feature(
                     content)
@@ -169,148 +240,161 @@ for c_max in counts:
             except:
                 bad_files += 1
                 continue
-            # if l_word_features["lex_no_of_words"] not in range(50, 100):
-            #     continue
-    #         # print "word count", l_word_features["lex_no_of_words"]
-    #         # print email
-            for char_feature in lexical_char_features:
-                combined_features.append(l_char_features[char_feature])
-            for word_feature in lexical_word_features:
-                combined_features.append(l_word_features[word_feature])
-            for syn_feature in syntactic_features:
-                combined_features.append(syn_features[syn_feature])
-            for struct_feature in structural_features:
-                combined_features.append(struc_features[struct_feature])
+            if "char" in feat:
+                for char_feature in lexical_char_features:
+                    combined_features.append(l_char_features[char_feature])
+                    feature_names.append(char_feature)
+            if "word" in feat:
+                for word_feature in lexical_word_features:
+                    combined_features.append(l_word_features[word_feature])
+                    feature_names.append(word_feature)
+            if "syntactic" in feat:
+                for syn_feature in syntactic_features:
+                    combined_features.append(syn_features[syn_feature])
+                    feature_names.append(syn_feature)
+            if "structural" in feat:
+                for struct_feature in structural_features:
+                    combined_features.append(struc_features[struct_feature])
+                    feature_names.append(struct_feature)
             training_vectors.append(combined_features)
             training_class_values.append(name)
             count += 1
-#         # training_emails.append(email)
-print bad_files
-#
-# # Extracting the features for test_set
-# # for name in author_names:
-# #     count = 0
-# #     mail_path = main_path + '/' + name
-# #     emails =  os.listdir(mail_path)
-# #     random.shuffle(emails)
-# #     for email in emails:
-# #         if not email.startswith("content"):# and email in training_emails:
-# #             continue
-# #         if count >= 10:
-# #             break
-# #         combined_features = []
-# #         fp = open(mail_path + '/' + email)
-# #         content = fp.read()
-# #         try:
-# #             l_char_features = feature_extractor.extract_char_lex_feature(
-# #                 content)
-# #             l_word_features = feature_extractor.extract_word_lex_features(
-# #                 content)
-# #             # syn_features = feature_extractor.extract_syntactic_features(
-# #             #     content)
-# #             struc_features = feature_extractor.extract_structural_features(
-# #                 content)
-# #         except:
-# #             bad_files += 1
-# #             continue
-# #         for word_feature in lexical_word_features:
-# #             combined_features.append(l_word_features[word_feature])
-# #         for char_feature in lexical_char_features:
-# #             combined_features.append(l_char_features[char_feature])
-# #         # for syn_feature in syntactic_features:
-# #         #     combined_features.append(syn_features[syn_feature])
-# #         for struct_feature in structural_features:
-# #             combined_features.append(struc_features[struct_feature])
-# #         test_vectors.append(combined_features)
-# #         test_class_values.append(name)
-# #         count += 1
-# #         training_emails.append(email)
-# Implementing the naive_bayes model here
-# print training_vectors, training_class_values
-X = np.array(training_vectors)
-Y = np.array(training_class_values)
-naive_bayes_model = MultinomialNB()
-# naive_bayes_model.fit(X, Y)
-print "naive bayes", naive_bayes_model
-# print X,Y
-# testing the accuracy
-# test_X = np.array(test_vectors)
-# test_Y = np.array(test_class_values)
-scores = cross_val_score(naive_bayes_model, X, Y, cv=10, scoring="accuracy")
-print scores
-print scores.mean()
-# # expected = test_Y
-# # expected = Y
-# # # predicted = naive_bayes_model.predict(test_X)
-# # predicted = naive_bayes_model.predict(X)
-# # # summarize the fit of the model
-# # print(metrics.classification_report(expected, predicted))
-# # print(metrics.confusion_matrix(expected, predicted))
-# # print "*" * 15
-# # implementing SVC here
-# # X_train, X_test, y_train, y_test = train_test_split(X,Y, test_size = 0.2, random_state =0)
-svm_linear_kernel_model = svm.SVC(kernel='linear')
-# svm_rbf_kernel_model = svm.SVC(kernel='rbf')
-# svm_polynomial_kernel_model = svm.SVC(kernel='poly')
-# # cv = ShuffleSplit(X_train.shape[0], n_iter=10, test_size=0.2, random_state=0)
-# # gammas = np.logspace(-6, -1, 10)
-# # classifier = GridSearchCV(estimator=svm_linear_kernel_model, cv=cv, param_grid=dict(gamma=gammas))
-# # classifier.fit(X_train, y_train)
-scores = cross_val_score(svm_linear_kernel_model, X, Y, cv=10, scoring="accuracy")
-print scores
-print scores.mean()
-# scores = cross_val_score(svm_rbf_kernel_model, X, Y, cv=10, scoring="accuracy")
-# print scores
-# print scores.mean()
-# scores = cross_val_score(svm_rbf_kernel_model, X, Y, cv=10, scoring="accuracy")
-# print scores
-# print scores.mean()
-# title = 'Learning Curves (SVM, linear kernel, $\gamma=%.6f$)' %classifier.best_estimator_.gamma
-# estimator = svm.SVC(kernel='linear', gamma=classifier.best_estimator_.gamma)
-# plot_learning_curve(estimator, title, X_train, y_train, cv=cv)
-# plt.show()
-# print classifier.score(X_test,y_test)
 
-# svm_linear_kernel_model.fit(X, Y)
-# print svm_linear_kernel_model
-# # testing the accuracy
-# expected = test_Y
-# predicted = svm_linear_kernel_model.predict(test_X)
-# # summarize the fit of the model
-# print(metrics.classification_report(expected, predicted))
-# print(metrics.confusion_matrix(expected, predicted))
-# print "*" * 15
-#
-# svm_rbf_kernel_model = svm.SVC(kernel='rbf')
-# svm_rbf_kernel_model.fit(X, Y)
-# print svm_rbf_kernel_model
-# # testing the accuracy
-# expected = test_Y
-# predicted = svm_rbf_kernel_model.predict(test_X)
-# # summarize the fit of the model
-# print(metrics.classification_report(expected, predicted))
-# print(metrics.confusion_matrix(expected, predicted))
-# print "*" * 15
-#
-# svm_polynomial_kernel_model = svm.SVC(kernel='poly')
-# svm_polynomial_kernel_model.fit(X, Y)
-# print svm_polynomial_kernel_model
-# # testing the accuracy
-# expected = test_Y
-# predicted = svm_polynomial_kernel_model.predict(test_X)
-# # summarize the fit of the model
-# print(metrics.classification_report(expected, predicted))
-# print(metrics.confusion_matrix(expected, predicted))
-# print "*" * 15
-#
-# # # implementing linear svms
-# # linear_svm_linear_kernel_model = svm.LinearSVC()
-# # linear_svm_linear_kernel_model.fit(X, Y)
-# # print linear_svm_linear_kernel_model
-# # # testing the accuracy
-# # expected = Y
-# # predicted = linear_svm_linear_kernel_model.predict(X)
-# # # summarize the fit of the model
-# # print(metrics.classification_report(expected, predicted))
-# # print(metrics.confusion_matrix(expected, predicted))
-# # print "*" * 15
+    X = np.array(training_vectors)
+    Y = np.array(training_class_values)
+    naive_bayes_model = MultinomialNB()
+    print "naive bayes accuracy"
+    score_1 = cross_val_score(naive_bayes_model, X, Y, cv=10, scoring="accuracy")
+    print score_1.mean()
+    naive_bayes_mean.append((score_1.mean() * 100))
+    svm_linear_kernel_model = svm.SVC(kernel='linear')
+    print "SVM accuracy"
+    score_2 = cross_val_score(svm_linear_kernel_model, X, Y, cv=10, scoring="accuracy")
+    print score_2.mean()
+    svm_mean.append((score_2.mean() * 100))
+# Plotting the graph for the variation
+# values = range(len(features))
+# plt.plot(values, naive_bayes_mean, 'r-', linewidth=5, label='Naive Bayes')
+# plt.xlabel("Features")
+# plt.ylabel("Accuracy")
+# plt.plot(values, svm_mean, 'y-', linewidth=5, label='SVM')
+# plt.grid(True)
+# plt.xticks(values, features)
+# plt.legend(loc='upper left')
+# plt.show()
+
+
+''' Execution of part (iii) '''
+print
+print "*"*20
+print "Accuracy comparison across training sizes"
+for trainSize in training_sizes:
+    author_names = authorsList[0]
+    training_vectors = []
+    training_class_values = []
+    bad_files = 0
+    feature_names = []
+    for name in author_names:
+        count = 0
+        mail_path = main_path + '/' + name
+        for comment in data[name]["comments"]:
+            content = comment["body"]
+            if count >= trainSize:
+                break
+            combined_features = []
+            try:
+                l_char_features = feature_extractor.extract_char_lex_feature(
+                    content)
+                l_word_features = feature_extractor.extract_word_lex_features(
+                    content)
+            except:
+                bad_files += 1
+                continue
+            for char_feature in lexical_char_features:
+                combined_features.append(l_char_features[char_feature])
+                feature_names.append(char_feature)
+            for word_feature in lexical_word_features:
+                combined_features.append(l_word_features[word_feature])
+                feature_names.append(word_feature)
+            training_vectors.append(combined_features)
+            training_class_values.append(name)
+            count += 1
+
+    X = np.array(training_vectors)
+    Y = np.array(training_class_values)
+    naive_bayes_model = MultinomialNB()
+    print "naive bayes accuracy"
+    score_1 = cross_val_score(naive_bayes_model, X, Y, cv=10, scoring="accuracy")
+    print score_1.mean()
+    naive_bayes_mean.append((score_1.mean() * 100))
+    svm_linear_kernel_model = svm.SVC(kernel='linear')
+    print "SVM accuracy"
+    score_2 = cross_val_score(svm_linear_kernel_model, X, Y, cv=10, scoring="accuracy")
+    print score_2.mean()
+    svm_mean.append((score_2.mean() * 100))
+# Plotting the graph for the variation
+# plt.plot(training_sizes, naive_bayes_mean, 'r-', linewidth=5, label='Naive Bayes')
+# plt.xlabel("training sizes")
+# plt.ylabel("Accuracy")
+# plt.plot(training_sizes, svm_mean, 'y-', linewidth=5, label='SVM')
+# plt.grid(True)
+# plt.legend(loc='upper left')
+# plt.show()
+
+''' Execution of part (iv) '''
+print
+print "*"*20
+print "Accuracy comparison across different number of authors"
+for authSet in authorsList:
+    author_names = authSet
+    training_vectors = []
+    training_class_values = []
+    bad_files = 0
+    feature_names = []
+    for name in author_names:
+        count = 0
+        for comment in data[name]["comments"]:
+            content = comment["body"]
+            if count >= training_sizes[-1]:
+                break
+            combined_features = []
+            try:
+                l_char_features = feature_extractor.extract_char_lex_feature(
+                    content)
+                l_word_features = feature_extractor.extract_word_lex_features(
+                    content)
+            except:
+                bad_files += 1
+                continue
+            for char_feature in lexical_char_features:
+                combined_features.append(l_char_features[char_feature])
+                feature_names.append(char_feature)
+            for word_feature in lexical_word_features:
+                combined_features.append(l_word_features[word_feature])
+                feature_names.append(word_feature)
+            training_vectors.append(combined_features)
+            training_class_values.append(name)
+            count += 1
+
+    X = np.array(training_vectors)
+    Y = np.array(training_class_values)
+    naive_bayes_model = MultinomialNB()
+    print "naive bayes accuracy"
+    score_1 = cross_val_score(naive_bayes_model, X, Y, cv=10, scoring="accuracy")
+    print score_1.mean()
+    naive_bayes_mean.append((score_1.mean() * 100))
+    svm_linear_kernel_model = svm.SVC(kernel='linear')
+    print "SVM accuracy"
+    score_2 = cross_val_score(svm_linear_kernel_model, X, Y, cv=10, scoring="accuracy")
+    print score_2.mean()
+    svm_mean.append((score_2.mean() * 100))
+# Plotting the graph for the variation
+# values = [len(i) for i in authorsList]
+# plt.plot(values, naive_bayes_mean, 'r-', linewidth=5, label='Naive Bayes')
+# plt.xlabel("Number of authors")
+# plt.ylabel("Accuracy")
+# plt.plot(values, svm_mean, 'y-', linewidth=5, label='SVM')
+# plt.grid(True)
+# plt.legend(loc='upper left')
+# plt.show()
+
