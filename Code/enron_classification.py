@@ -142,7 +142,7 @@ main_path = '/Users/rakshitha/AuthorIdentification/relevant_email_data'
     100 emails and compare the accuracies obtained. Other parameters remain the same as mentioned in (i)
     iv) Lastly to compare the effect on accuracies on increase in the number of authors, we increase the size of
     authors from 2 authors, 5 authors, 10 authors thereby performing a 2-way, 5-way, and 10-way
-    classification respectively. The top n( where n being 2,4,8,10) who sent maximum mails are taken into
+    classification respectively. The top n( where n being 2,4,10) who sent maximum mails are taken into
     consideration.
     '''
 
